@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snipping Tool Clone</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { border: 1px solid black; cursor: crosshair; }
+        .controls { margin: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h2>Simple Snipping Tool</h2>
+    <button onclick="captureScreen()">Capture Screen</button>
+    <canvas id="canvas" class="hidden"></canvas>
+    <button id="saveBtn" class="hidden" onclick="saveImage()">Save Screenshot</button>
+
+    <script>
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let startX, startY, endX, endY, imageData;
+        let dragging = false;
+
+        async function captureScreen() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: { mediaSource: "screen" } });
+                const video = document.createElement("video");
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    setTimeout(() => {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        video.srcObject.getTracks().forEach(track => track.stop());
+                        canvas.classList.remove("hidden");
+                    }, 1000);
+                };
+            } catch (err) {
+                alert("Error capturing screen: " + err.message);
+            }
+        }
+
+        canvas.addEventListener("mousedown", (e) => {
+            startX = e.offsetX;
+            startY = e.offsetY;
+            dragging = true;
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (!dragging) return;
+            endX = e.offsetX;
+            endY = e.offsetY;
+            ctx.putImageData(imageData, 0, 0);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            dragging = false;
+            let width = endX - startX;
+            let height = endY - startY;
+            imageData = ctx.getImageData(startX, startY, width, height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.width = width;
+            canvas.height = height;
+            ctx.putImageData(imageData, 0, 0);
+            document.getElementById("saveBtn").classList.remove("hidden");
+        });
+
+        function saveImage() {
+            let link = document.createElement("a");
+            link.download = "screenshot.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }
+    </script>
+</body>
+</html>
